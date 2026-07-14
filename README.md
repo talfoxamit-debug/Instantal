@@ -18,7 +18,7 @@ Next.js (App Router) · TypeScript · Tailwind 4 · shadcn/ui · Supabase
 |---|---|---|
 | 0 | Infra + foundations (auth, workspaces, RLS, dashboard shell) | ✅ code done — manual infra steps in [`docs/PHASE-0-CHECKLIST.md`](./docs/PHASE-0-CHECKLIST.md) |
 | 1 | CRM core (leads, CSV import, verification, suppression, Instantly migration) | ✅ code done — pick a verification vendor (`.env`), then import |
-| 2 | Sending engine (Gmail OAuth, send_queue, workers, ramp) | ⬜ |
+| 2 | Sending engine (Gmail OAuth, send_queue, workers, ramp, unsubscribe/tracking) | ✅ code done — Google OAuth app + pg_cron setup in `docs/SENDING-SETUP.md` |
 | 3 | Campaign builder (sequences, variants, scheduling, launch gate) | ⬜ |
 | 4 | Replies + unified inbox (classification, stop-on-reply) | ⬜ |
 | 5 | Deliverability ops + analytics | ⬜ |
@@ -63,10 +63,16 @@ lib/
   suppression/      suppression data queries and server actions
   import/           pure CSV parse + dedup/classify logic
   verification/     provider-agnostic email verification adapter
+  inboxes/          inbox + sending-domain data and actions
+  crypto/           AES-256-GCM token encryption + HMAC state signing
+  gmail/            OAuth + Gmail API send (MIME, threading)
+  sending/          send-worker + pure render/ramp logic
+  cron/             cron shared-secret auth
+app/api/            cron send-worker, oauth, unsubscribe, tracking routes
 proxy.ts            session refresh + route protection (Next 16 proxy)
 supabase/
-  migrations/       SQL migrations (Phase 0 baseline + Phase 1 full schema)
-docs/               DNS records, Phase 0 ops checklist, Instantly migration
+  migrations/       SQL migrations (Phase 0 baseline, Phase 1 schema, Phase 2 sending)
+docs/               DNS, Phase 0 checklist, Instantly migration, sending setup
 ```
 
 ## Rules that don't bend

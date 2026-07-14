@@ -18,7 +18,7 @@ const NAV_ITEMS = [
   { label: "Campaigns", icon: Send, phase: "P3" },
   { label: "Inbox", icon: Inbox, phase: "P4" },
   { label: "Analytics", icon: BarChart3, phase: "P5" },
-  { label: "Settings", icon: Settings, phase: "P2" },
+  { label: "Settings", href: "/settings/inboxes", icon: Settings },
 ] as const;
 
 export function AppSidebar() {
