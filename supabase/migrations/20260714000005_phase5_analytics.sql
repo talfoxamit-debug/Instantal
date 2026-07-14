@@ -14,10 +14,40 @@
 alter table public.inboxes
   add column if not exists pause_reason text,
   add column if not exists last_error text,
-  add column if not exists last_error_at timestamptz;
+  add column if not exists last_error_at timestamptz,
+  -- When the entity last became 'active'. Auto-pause measures the bounce rate
+  -- only over sends SINCE this moment, so reactivating after a fix gives a real
+  -- grace period instead of an instant re-pause on the same stale bounces.
+  add column if not exists last_activated_at timestamptz;
 
 alter table public.sending_domains
-  add column if not exists pause_reason text;
+  add column if not exists pause_reason text,
+  add column if not exists last_activated_at timestamptz;
+
+-- Stamp last_activated_at whenever status transitions to 'active' (any path:
+-- UI reactivation, manual SQL, first activation). Scoped to `update of status`
+-- so the send-worker's frequent last_send_at writes don't fire it.
+create or replace function private.stamp_activation()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if new.status = 'active'
+     and (tg_op = 'INSERT' or old.status is distinct from 'active') then
+    new.last_activated_at := now();
+  end if;
+  return new;
+end;
+$$;
+
+create trigger inboxes_stamp_activation
+  before insert or update of status on public.inboxes
+  for each row execute function private.stamp_activation();
+
+create trigger sending_domains_stamp_activation
+  before insert or update of status on public.sending_domains
+  for each row execute function private.stamp_activation();
 
 -- ===========================================================================
 -- Analytics (Section 5.6)
@@ -247,9 +277,13 @@ begin
     from public.inboxes i
     join lateral (
       select
-        count(*) filter (where e.sent_at >= now() - interval '7 days') as sent_7d,
-        count(*) filter (where e.bounced and e.sent_at >= now() - interval '7 days') as bounced_7d
-      from public.emails e
+        count(*) filter (where e.sent_at >= w.since) as sent_7d,
+        count(*) filter (where e.bounced and e.sent_at >= w.since) as bounced_7d
+      from (
+        select greatest(now() - interval '7 days',
+                        coalesce(i.last_activated_at, now() - interval '7 days')) as since
+      ) w
+      cross join public.emails e
       where e.inbox_id = i.id
     ) s on true
     where i.status = 'active'
@@ -279,10 +313,14 @@ begin
     from public.sending_domains d
     join lateral (
       select
-        count(*) filter (where e.sent_at >= now() - interval '7 days') as sent_7d,
-        count(*) filter (where e.bounced and e.sent_at >= now() - interval '7 days') as bounced_7d
-      from public.emails e
-      join public.inboxes i on i.id = e.inbox_id
+        count(*) filter (where e.sent_at >= w.since) as sent_7d,
+        count(*) filter (where e.bounced and e.sent_at >= w.since) as bounced_7d
+      from (
+        select greatest(now() - interval '7 days',
+                        coalesce(d.last_activated_at, now() - interval '7 days')) as since
+      ) w
+      cross join public.inboxes i
+      join public.emails e on e.inbox_id = i.id
       where i.domain_id = d.id
     ) s on true
     where d.status = 'active'

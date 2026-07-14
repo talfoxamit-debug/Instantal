@@ -37,11 +37,19 @@ export function dkimPresent(txts: string[]): boolean {
   );
 }
 
-// A DBL "hit" is any A record in 127.0.0.0/8 (list-response space). Some zones
-// return 127.255.255.254 for "query blocked / too big" — that is NOT a listing.
+// A DBL "hit" is an A record in the 127.0.0.0/8 list-response space — BUT the
+// whole 127.255.255.0/24 block is reserved for status/error codes, not
+// listings: .252 (typing error / anonymous query), .253 (prohibited query
+// type), .254 (query via a public/open resolver), .255 (query-volume / rate
+// limit exceeded). Misreading any of those — especially .255 under load or
+// behind a shared resolver — as a listing would fire a false "blacklisted"
+// alert every run. Exclude the entire error block, and 127.0.0.1 (loopback).
 export function interpretDnsblAnswer(addrs: string[]): boolean {
   return addrs.some(
-    (a) => a.startsWith("127.") && a !== "127.255.255.254" && a !== "127.0.0.1",
+    (a) =>
+      a.startsWith("127.") &&
+      a !== "127.0.0.1" &&
+      !a.startsWith("127.255.255."),
   );
 }
 
