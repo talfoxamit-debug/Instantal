@@ -19,7 +19,7 @@ Next.js (App Router) · TypeScript · Tailwind 4 · shadcn/ui · Supabase
 | 0 | Infra + foundations (auth, workspaces, RLS, dashboard shell) | ✅ code done — manual infra steps in [`docs/PHASE-0-CHECKLIST.md`](./docs/PHASE-0-CHECKLIST.md) |
 | 1 | CRM core (leads, CSV import, verification, suppression, Instantly migration) | ✅ code done — pick a verification vendor (`.env`), then import |
 | 2 | Sending engine (Gmail OAuth, send_queue, workers, ramp, unsubscribe/tracking) | ✅ code done — Google OAuth app + pg_cron setup in `docs/SENDING-SETUP.md` |
-| 3 | Campaign builder (sequences, variants, scheduling, launch gate) | ⬜ |
+| 3 | Campaign builder (sequences, variants, scheduling, launch gate) | ✅ code done |
 | 4 | Replies + unified inbox (classification, stop-on-reply) | ⬜ |
 | 5 | Deliverability ops + analytics | ⬜ |
 | 6 | Backlog (enrichment, CRM webhook sync, team roles) | ⬜ |

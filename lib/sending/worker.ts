@@ -11,6 +11,12 @@ import {
   seededPicker,
 } from "@/lib/sending/render";
 import { gapSatisfied, rampCap, randomGapMs } from "@/lib/sending/ramp";
+import {
+  isWithinWindow,
+  nextWindowOpen,
+  timeToMinutes,
+  type SendWindow,
+} from "@/lib/campaigns/schedule";
 
 const CLAIM_BATCH = 100;
 const MAX_ATTEMPTS = 3; // initial + 2 retries (Section 5.3)
@@ -289,11 +295,68 @@ async function processOne(
     .maybeSingle();
   if (!step) return finalizeFail(admin, row, "step_missing", now);
 
+  // Pre-send idempotency: if this (campaign, lead, step) was already emailed,
+  // a duplicate queue row slipped through — mark it sent and skip rather than
+  // dispatch a second copy. The emails unique key backs this, but checking
+  // BEFORE sending is what actually prevents the double dispatch.
+  const { data: already } = await admin
+    .from("emails")
+    .select("id")
+    .eq("campaign_id", row.campaign_id)
+    .eq("lead_id", row.lead_id)
+    .eq("step_id", step.id)
+    .limit(1);
+  if (already && already.length > 0) {
+    await admin
+      .from("send_queue")
+      .update({ status: "sent", updated_at: now.toISOString() })
+      .eq("id", row.id);
+    return "skipped";
+  }
+
   const { data: campaign } = await admin
     .from("campaigns")
-    .select("id, track_opens")
+    .select(
+      "id, track_opens, status, send_window_start, send_window_end, send_days, timezone_mode, fixed_timezone",
+    )
     .eq("id", row.campaign_id)
     .maybeSingle();
+
+  // Never send outside the campaign's window / on off days, even if a row came
+  // due (follow-ups scheduled delay_days later can drift off-hours). Defer to
+  // the next window open instead of sending at 3am.
+  if (campaign) {
+    if (campaign.status === "paused") {
+      await admin
+        .from("send_queue")
+        .update({ status: "cancelled", error: "campaign_paused", updated_at: now.toISOString() })
+        .eq("id", row.id);
+      return "skipped";
+    }
+    const { data: wsTz } = await admin
+      .from("workspaces")
+      .select("default_timezone")
+      .eq("id", ws)
+      .maybeSingle();
+    const timeZone =
+      campaign.timezone_mode === "fixed" && campaign.fixed_timezone
+        ? (campaign.fixed_timezone as string)
+        : (wsTz?.default_timezone as string) ?? "America/New_York";
+    const window: SendWindow = {
+      startMinute: timeToMinutes(campaign.send_window_start as string),
+      endMinute: timeToMinutes(campaign.send_window_end as string),
+      days: (campaign.send_days as number[]) ?? [1, 2, 3, 4, 5],
+      timeZone,
+    };
+    if (!isWithinWindow(now, window)) {
+      const at = nextWindowOpen(now, window).toISOString();
+      await admin
+        .from("send_queue")
+        .update({ status: "pending", scheduled_at: at, updated_at: now.toISOString() })
+        .eq("id", row.id);
+      return "released";
+    }
+  }
 
   const { data: workspace } = await admin
     .from("workspaces")

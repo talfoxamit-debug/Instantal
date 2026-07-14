@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Leads", href: "/leads", icon: Users },
-  { label: "Campaigns", icon: Send, phase: "P3" },
+  { label: "Campaigns", href: "/campaigns", icon: Send },
   { label: "Inbox", icon: Inbox, phase: "P4" },
   { label: "Analytics", icon: BarChart3, phase: "P5" },
   { label: "Settings", href: "/settings/inboxes", icon: Settings },
