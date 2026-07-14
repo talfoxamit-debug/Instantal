@@ -19,6 +19,10 @@ already in this repo.
       only; see plan §9.1 before paying for anything.
 - [ ] Calendar reminder: first manual sends (5-15/day/inbox, warmest verified
       leads) no earlier than **day 10-14** after DNS goes live.
+- [ ] Export everything from Instantly while the subscription is active:
+      blocklist/unsubscribes, per-campaign leads with status, analytics,
+      sequence copy. Imports happen in Phase 1; exports cannot wait —
+      see `docs/INSTANTLY-MIGRATION.md`.
 
 ## Supabase project (once)
 
@@ -32,6 +36,17 @@ already in this repo.
       an admin).
 - [ ] Auth → Users → **Add user** → create your own user with a password
       (check "Auto confirm").
+- [ ] Same for Otman and Saar (v1 access is confirmed). After you create
+      your workspaces in the app, add them as members in the SQL editor —
+      there is no member-management UI until Phase 6:
+
+      ```sql
+      insert into public.members (workspace_id, user_id, role)
+      select w.id, u.id, 'member'
+      from public.workspaces w
+      cross join auth.users u
+      where u.email in ('otman@...', 'saar@...');
+      ```
 
 ## Vercel + app (once)
 

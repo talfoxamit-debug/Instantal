@@ -14,6 +14,8 @@ Target volume: 1,000 to 10,000 cold emails per month.
 4. Google Workspace inboxes, sending through the Gmail API (not raw SMTP).
 5. Leads arrive by CSV import and manual add in v1. Scraper/enrichment integration is Phase 6.
 6. Resend stays for transactional email only. Cold outreach never touches it.
+7. CONFIRMED: Otman and Saar get access in v1 — admin-created users with basic member access (the Phase 0 schema already supports this). Granular per-workspace permissions stay in Phase 6.
+8. CONFIRMED: Existing Instantly data migrates at kickoff. Suppression/unsubscribe list imports FIRST (compliance — prior opt-outs must survive the switch), then leads with contacted-history. See Phase 1 and `docs/INSTANTLY-MIGRATION.md`.
 
 ---
 
@@ -209,7 +211,11 @@ Total: 5 to 6 weeks part time with Claude Code. Domain aging + ramp runs in para
 - Full schema migration. Leads CRUD, lists, tags, custom fields.
 - CSV import wizard with dedupe + verification API + import report.
 - Lead detail page with timeline scaffold. Suppression list + global enforcement trigger.
-- **Done when:** you import a real 500-lead CSV and get a clean, verified, deduped list.
+- Instantly migration (order matters): import the Instantly block list /
+  unsubscribes into `suppression` before any lead import, then the lead
+  exports (source = 'instantly', preserving contacted/replied status so
+  sequences never re-open closed conversations). See `docs/INSTANTLY-MIGRATION.md`.
+- **Done when:** you import a real 500-lead CSV and get a clean, verified, deduped list — and every Instantly unsubscribe is in `suppression`.
 
 ### Phase 2 - Sending Engine (Week 2-3)
 
@@ -245,7 +251,7 @@ Total: 5 to 6 weeks part time with Claude Code. Domain aging + ramp runs in para
 - Scraper/enrichment pipeline feeding leads directly (AYCA-style flows).
 - AI first-line personalization at scale with review queue.
 - Webhook sync to foxstays CRM (HMAC, same pattern as your Partner API).
-- Team roles for Otman/Saar, per-workspace permissions.
+- Granular per-workspace permissions + member management UI (basic v1 access for Otman/Saar ships in Phase 0 via admin-created users).
 - LinkedIn/manual task steps in sequences. Deeper A/B stats.
 
 ---
@@ -278,8 +284,9 @@ At 10k/month you need ~12 inboxes, so Workspace alone is ~$84/mo. Still cheaper 
 
 ## 10. Open Questions
 
-1. Who else needs access in v1: just you, or Otman/Saar immediately?
-2. Any existing Instantly campaign data/leads to migrate at kickoff?
+~~Both resolved 2026-07-14:~~
+1. ~~Who else needs access in v1?~~ **Otman and Saar get access in v1** (Section 1.7).
+2. ~~Any existing Instantly data to migrate?~~ **Yes — migrate at kickoff** (Section 1.8, Phase 1, `docs/INSTANTLY-MIGRATION.md`). Export everything from Instantly while the subscription is still active.
 
 ---
 

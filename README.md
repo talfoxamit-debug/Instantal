@@ -17,7 +17,7 @@ Next.js (App Router) · TypeScript · Tailwind 4 · shadcn/ui · Supabase
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | Infra + foundations (auth, workspaces, RLS, dashboard shell) | ✅ code done — manual infra steps in [`docs/PHASE-0-CHECKLIST.md`](./docs/PHASE-0-CHECKLIST.md) |
-| 1 | CRM core (leads, CSV import, verification, suppression) | ⬜ |
+| 1 | CRM core (leads, CSV import, verification, suppression, Instantly migration) | ⬜ |
 | 2 | Sending engine (Gmail OAuth, send_queue, workers, ramp) | ⬜ |
 | 3 | Campaign builder (sequences, variants, scheduling, launch gate) | ⬜ |
 | 4 | Replies + unified inbox (classification, stop-on-reply) | ⬜ |
@@ -59,7 +59,7 @@ lib/
 proxy.ts            session refresh + route protection (Next 16 proxy)
 supabase/
   migrations/       SQL migrations (workspaces, members, RLS baseline)
-docs/               DNS records + Phase 0 ops checklist
+docs/               DNS records, Phase 0 ops checklist, Instantly migration
 ```
 
 ## Rules that don't bend
