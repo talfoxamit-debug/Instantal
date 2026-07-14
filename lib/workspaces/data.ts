@@ -38,3 +38,15 @@ export async function getActiveWorkspace(
 
   return (active ?? memberships[0]).workspace;
 }
+
+// Resolve the active workspace id for a mutation/query, validated against the
+// caller's real memberships. Throws if the user has no workspace — callers in
+// the authenticated app always do, so this doubles as an auth guard.
+export async function requireActiveWorkspaceId(): Promise<string> {
+  const memberships = await getUserMemberships();
+  const workspace = await getActiveWorkspace(memberships);
+  if (!workspace) {
+    throw new Error("No active workspace");
+  }
+  return workspace.id;
+}

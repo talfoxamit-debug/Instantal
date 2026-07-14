@@ -32,12 +32,17 @@ one subfolder per venture.
 
 ## Step 2 — Import into Instantal (Phase 1, in this order)
 
-1. **Suppression**: import every blocklist/unsubscribe CSV into
-   `suppression` with `workspace_id = null` (global — an opt-out from one
-   venture is honored across all of them) and `reason = 'instantly_import'`.
-2. **Leads**: import lead CSVs through the Phase 1 import wizard,
-   `source = 'instantly'`. The wizard dedupes against suppression, so order
-   makes this automatic. Map Instantly statuses:
+The screens exist now: **CRM → Suppression** and **CRM → Import**.
+
+1. **Suppression first**: on the Suppression screen, open **Bulk paste**,
+   paste the entire Instantly unsubscribe/blocklist (one address per line),
+   and choose scope **Global** (an opt-out from one venture is honored across
+   all of them). It normalizes, dedupes, and reports how many were added.
+   Doing this BEFORE the lead import is what makes the next step auto-skip
+   opted-out people.
+2. **Leads**: import lead CSVs through the **Import** wizard (it maps columns,
+   dedupes against existing leads **and** the suppression list, verifies, and
+   shows an accepted/dupes/invalid/suppressed report). Map Instantly statuses:
    - replied / interested → matching pipeline stage, excluded from cold sequences
    - bounced → do not import as sendable; add to suppression (hard bounce)
    - contacted (no reply) → `owner_stage = Contacted`; only re-enter

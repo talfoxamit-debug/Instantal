@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 // (OUTREACH-BUILD-PLAN.md Section 7).
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Leads", icon: Users, phase: "P1" },
+  { label: "Leads", href: "/leads", icon: Users },
   { label: "Campaigns", icon: Send, phase: "P3" },
   { label: "Inbox", icon: Inbox, phase: "P4" },
   { label: "Analytics", icon: BarChart3, phase: "P5" },

@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { createClient } from "@/lib/supabase/server";
 import {
   getActiveWorkspace,
   getUserMemberships,
@@ -16,13 +17,6 @@ import {
 export const metadata: Metadata = {
   title: "Dashboard",
 };
-
-const STAT_CARDS = [
-  { label: "Leads", phase: "Phase 1" },
-  { label: "Active campaigns", phase: "Phase 3" },
-  { label: "Connected inboxes", phase: "Phase 2" },
-  { label: "Sends today", phase: "Phase 2" },
-] as const;
 
 const PHASE_0_CHECKLIST = [
   "Buy 2 sending domains (variants, never revenue domains)",
@@ -36,6 +30,33 @@ export default async function DashboardPage() {
   const memberships = await getUserMemberships();
   const workspace = await getActiveWorkspace(memberships);
 
+  // Live counts where the data exists; later-phase metrics stay phase-badged.
+  const supabase = await createClient();
+  const [{ count: leadCount }, { count: verifiedCount }, { count: suppressionCount }] =
+    workspace
+      ? await Promise.all([
+          supabase
+            .from("leads")
+            .select("*", { count: "exact", head: true })
+            .eq("workspace_id", workspace.id),
+          supabase
+            .from("leads")
+            .select("*", { count: "exact", head: true })
+            .eq("workspace_id", workspace.id)
+            .eq("verify_status", "valid"),
+          supabase
+            .from("suppression")
+            .select("*", { count: "exact", head: true }),
+        ])
+      : [{ count: 0 }, { count: 0 }, { count: 0 }];
+
+  const statCards = [
+    { label: "Leads", value: leadCount ?? 0 },
+    { label: "Verified leads", value: verifiedCount ?? 0 },
+    { label: "Suppression list", value: suppressionCount ?? 0 },
+    { label: "Active campaigns", value: 0, phase: "Phase 3" },
+  ] as const;
+
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
       <div>
@@ -48,15 +69,19 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {STAT_CARDS.map((stat) => (
+        {statCards.map((stat) => (
           <Card key={stat.label}>
             <CardHeader className="pb-2">
               <CardDescription>{stat.label}</CardDescription>
-              <CardTitle className="text-3xl tabular-nums">0</CardTitle>
+              <CardTitle className="text-3xl tabular-nums">
+                {stat.value.toLocaleString()}
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <Badge variant="outline">{stat.phase}</Badge>
-            </CardContent>
+            {"phase" in stat && stat.phase ? (
+              <CardContent>
+                <Badge variant="outline">{stat.phase}</Badge>
+              </CardContent>
+            ) : null}
           </Card>
         ))}
       </div>
