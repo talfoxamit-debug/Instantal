@@ -74,6 +74,35 @@ The worker is safe to run every minute even with nothing to do — it claims
 due rows atomically (`FOR UPDATE SKIP LOCKED`, so overlapping runs never
 double-send) and returns immediately when the queue is empty.
 
+### 3a. Schedule the reply-worker (Phase 4)
+
+The reply-worker polls each connected inbox for new replies + bounce
+notifications every 5 minutes, classifies replies with Claude, and drives the
+unified inbox / pipeline. It runs on a separate lease (id=2) so it never blocks
+the send-worker.
+
+```sql
+select cron.schedule(
+  'instantal-reply-worker',
+  '*/5 * * * *',                     -- every 5 minutes
+  $$
+  select net.http_post(
+    url     := 'https://APP_URL/api/cron/poll-replies',  -- <-- your APP_URL
+    headers := jsonb_build_object(
+      'Authorization', 'Bearer YOUR_CRON_SECRET',         -- <-- your CRON_SECRET
+      'Content-Type',  'application/json'
+    ),
+    body    := '{}'::jsonb
+  );
+  $$
+);
+```
+
+Requires `ANTHROPIC_API_KEY` set (reply classification). Tune the classifier
+model with `ANTHROPIC_CLASSIFY_MODEL` (default `claude-haiku-4-5`) and the
+out-of-office auto-resume delay with `OOO_RESUME_DELAY_DAYS` (default `3`).
+Remove later with `select cron.unschedule('instantal-reply-worker');`.
+
 ## 4. Bring an inbox online
 
 Per inbox, in **Settings → Inboxes**:
@@ -101,4 +130,7 @@ sending subdomain rather than the app host.
    your workspace's physical address, sends via the Gmail API.
 4. Records the email + a send event, threads follow-ups (In-Reply-To /
    References), and schedules the next step.
-5. Hard bounces / replies / unsubscribes are handled by triggers + Phase 4.
+5. Hard bounces / replies / unsubscribes are handled by triggers + the
+   reply-worker (Phase 4): a reply stops the sequence and is classified into the
+   unified inbox; an out-of-office auto-resumes after `OOO_RESUME_DELAY_DAYS`; a
+   hard bounce suppresses the address globally and increments the domain counter.
