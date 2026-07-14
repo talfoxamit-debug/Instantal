@@ -103,6 +103,33 @@ model with `ANTHROPIC_CLASSIFY_MODEL` (default `claude-haiku-4-5`) and the
 out-of-office auto-resume delay with `OOO_RESUME_DELAY_DAYS` (default `3`).
 Remove later with `select cron.unschedule('instantal-reply-worker');`.
 
+### 3b. Schedule the health-worker (Phase 5)
+
+Runs once a day: applies auto-pause rules (inbox 7d bounce > 3% → pause inbox;
+domain > 5% → pause domain + its inboxes), re-checks DNS (SPF/DKIM/DMARC),
+spot-checks domain blocklists, and confirms tracking subdomains resolve.
+
+```sql
+select cron.schedule(
+  'instantal-health-worker',
+  '17 8 * * *',                      -- daily at 08:17 UTC
+  $$
+  select net.http_post(
+    url     := 'https://APP_URL/api/cron/health-worker',  -- <-- your APP_URL
+    headers := jsonb_build_object(
+      'Authorization', 'Bearer YOUR_CRON_SECRET',         -- <-- your CRON_SECRET
+      'Content-Type',  'application/json'
+    ),
+    body    := '{}'::jsonb
+  );
+  $$
+);
+```
+
+Set `SLACK_ALERT_WEBHOOK_URL` to receive auto-pause / DNS-regression / blacklist
+alerts in Slack; without it, alerts are logged to the worker output. Remove
+later with `select cron.unschedule('instantal-health-worker');`.
+
 ## 4. Bring an inbox online
 
 Per inbox, in **Settings → Inboxes**:
