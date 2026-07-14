@@ -4,8 +4,11 @@
 // in immediately with the password you set; on first login they land on
 // /onboarding to create (or are added to) a workspace.
 //
+// Plain .mjs on purpose: it runs on any modern Node (18/20/22+) with no build
+// step and no experimental flags.
+//
 // Usage (from the repo root, with the app's env available):
-//   node --experimental-strip-types scripts/create-user.ts <email> [password]
+//   node scripts/create-user.mjs <email> [password]
 //   npm run create-user -- <email> [password]
 //
 // If no password is given, a strong one is generated and printed once. Requires
@@ -16,7 +19,7 @@ import { randomBytes } from "node:crypto";
 
 import { createClient } from "@supabase/supabase-js";
 
-function env(...names: string[]): string {
+function env(...names) {
   for (const n of names) {
     const v = process.env[n];
     if (v) return v;
@@ -24,20 +27,18 @@ function env(...names: string[]): string {
   throw new Error(`Missing required env var (one of: ${names.join(", ")}).`);
 }
 
-function generatePassword(): string {
+function generatePassword() {
   // 24 url-safe chars — comfortably above Supabase's 6-char minimum.
   return randomBytes(18).toString("base64url");
 }
 
-async function main(): Promise<void> {
+async function main() {
   const email = process.argv[2]?.trim().toLowerCase();
   const password = process.argv[3] ?? generatePassword();
   const generated = !process.argv[3];
 
   if (!email || !email.includes("@")) {
-    console.error(
-      "Usage: node --experimental-strip-types scripts/create-user.ts <email> [password]",
-    );
+    console.error("Usage: node scripts/create-user.mjs <email> [password]");
     process.exit(1);
   }
 

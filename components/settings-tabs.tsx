@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 const TABS = [
   { label: "Inboxes", href: "/settings/inboxes" },
   { label: "Sending domains", href: "/settings/domains" },
+  { label: "Workspace", href: "/settings/workspace" },
+  { label: "Members", href: "/settings/members" },
 ] as const;
 
 export function SettingsTabs() {

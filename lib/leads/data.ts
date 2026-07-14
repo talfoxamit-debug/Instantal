@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Lead, LeadList } from "@/lib/types";
+import { isUuid } from "@/lib/validation";
 import { requireActiveWorkspaceId } from "@/lib/workspaces/data";
 
 export interface LeadFilters {
@@ -68,6 +69,7 @@ export async function getLeads(
 }
 
 export async function getLead(id: string): Promise<Lead | null> {
+  if (!isUuid(id)) return null; // non-UUID route param -> 404, not a 500
   const workspaceId = await requireActiveWorkspaceId();
   const supabase = await createClient();
   const { data } = await supabase

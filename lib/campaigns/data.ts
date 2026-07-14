@@ -4,6 +4,7 @@ import {
   type ChecklistItem,
 } from "@/lib/campaigns/checklist";
 import { createClient } from "@/lib/supabase/server";
+import { isUuid } from "@/lib/validation";
 import { requireActiveWorkspaceId } from "@/lib/workspaces/data";
 
 const MIN_DOMAIN_AGE_DAYS = 14;
@@ -53,6 +54,7 @@ export async function listCampaigns(): Promise<CampaignSummary[]> {
 }
 
 export async function getCampaign(id: string): Promise<CampaignDetail | null> {
+  if (!isUuid(id)) return null; // non-UUID route param -> 404, not a 500
   const workspaceId = await requireActiveWorkspaceId();
   const supabase = await createClient();
   const { data, error } = await supabase

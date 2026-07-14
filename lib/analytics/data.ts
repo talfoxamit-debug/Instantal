@@ -1,5 +1,6 @@
 import { rampCap } from "@/lib/sending/ramp";
 import { createClient } from "@/lib/supabase/server";
+import { isUuid } from "@/lib/validation";
 import { requireActiveWorkspaceId } from "@/lib/workspaces/data";
 import {
   rate,
@@ -48,6 +49,7 @@ export async function getWorkspaceCampaignStats(): Promise<CampaignRollup[]> {
 export async function getCampaignVariantStats(
   campaignId: string,
 ): Promise<VariantStat[]> {
+  if (!isUuid(campaignId)) return []; // non-UUID route param -> empty, not a 500
   const workspaceId = await requireActiveWorkspaceId();
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("campaign_variant_stats", {

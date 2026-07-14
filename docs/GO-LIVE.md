@@ -31,10 +31,10 @@ Do the steps in order — later steps depend on earlier ones.
    API keys*, the **publishable** key and the **secret** (service-role) key.
 2. Apply the six migrations in `supabase/migrations/` **in filename order**.
    Either:
-   - **Supabase CLI:** `supabase link --project-ref <ref>` then
-     `supabase db push`, **or**
-   - **SQL editor:** paste each `supabase/migrations/2026*.sql` file in order and
-     run it.
+   - **SQL editor (simplest):** paste each `supabase/migrations/2026*.sql` file
+     in order and run it. **or**
+   - **Supabase CLI:** run `supabase init` once (no `config.toml` is committed),
+     then `supabase link --project-ref <ref>` and `supabase db push`.
 3. Sanity check: the `public` schema should now have `workspaces`, `leads`,
    `campaigns`, `send_queue`, `emails`, `replies`, `suppression`, etc., all with
    RLS enabled.
@@ -179,8 +179,10 @@ npm run create-user -- otman@yourdomain.com
 npm run create-user -- saar@yourdomain.com
 ```
 
-Add them as members of the relevant workspace(s) (owner-managed; a membership row
-per workspace). They sign in and see exactly that workspace's data (RLS-isolated).
+Then, as the workspace owner, go to **Settings → Members**, and add each by
+email (they must have a login first, from the step above). Switch the active
+workspace (top-left switcher) and repeat if they need access to more than one
+venture. They sign in and see exactly that workspace's data (RLS-isolated).
 
 ---
 

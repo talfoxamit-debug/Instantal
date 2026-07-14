@@ -25,10 +25,19 @@ function clientSecret(): string {
   return secret;
 }
 
-// The callback URL must be registered in the Google Cloud console. Derived
-// from the request origin so it works across localhost/preview/prod.
+// The callback URL must EXACTLY match the one registered in the Google Cloud
+// console. Anchor it to APP_URL (the single canonical, registered host) rather
+// than the request origin — otherwise connecting an inbox from a *.vercel.app
+// preview or any non-canonical host sends a redirect_uri Google doesn't
+// recognize and the OAuth flow fails. Falls back to the request origin only
+// when APP_URL is unset (e.g. local dev).
 export function redirectUri(origin: string): string {
-  return `${origin}/api/oauth/google/callback`;
+  const base = (
+    process.env.APP_URL ??
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    origin
+  ).replace(/\/$/, "");
+  return `${base}/api/oauth/google/callback`;
 }
 
 // Build the consent URL. `state` carries a signed/opaque value we verify on

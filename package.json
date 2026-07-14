@@ -2,12 +2,15 @@
   "name": "instantal",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "create-user": "node --experimental-strip-types scripts/create-user.ts"
+    "create-user": "node scripts/create-user.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0",
