@@ -17,29 +17,34 @@ Next.js (App Router) · TypeScript · Tailwind 4 · shadcn/ui · Supabase
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | Infra + foundations (auth, workspaces, RLS, dashboard shell) | ✅ code done — manual infra steps in [`docs/PHASE-0-CHECKLIST.md`](./docs/PHASE-0-CHECKLIST.md) |
-| 1 | CRM core (leads, CSV import, verification, suppression, Instantly migration) | ✅ code done — pick a verification vendor (`.env`), then import |
-| 2 | Sending engine (Gmail OAuth, send_queue, workers, ramp, unsubscribe/tracking) | ✅ code done — Google OAuth app + pg_cron setup in `docs/SENDING-SETUP.md` |
-| 3 | Campaign builder (sequences, variants, scheduling, launch gate) | ✅ code done |
-| 4 | Replies + unified inbox (classification, stop-on-reply) | ⬜ |
-| 5 | Deliverability ops + analytics | ⬜ |
-| 6 | Backlog (enrichment, CRM webhook sync, team roles) | ⬜ |
+| 1 | CRM core (leads, CSV import, verification, suppression, Instantly migration) | ✅ done |
+| 2 | Sending engine (Gmail OAuth, send_queue, workers, ramp, unsubscribe/tracking) | ✅ done |
+| 3 | Campaign builder (sequences, variants, scheduling, launch gate) | ✅ done |
+| 4 | Replies + unified inbox (classification, stop-on-reply, pipeline) | ✅ done |
+| 5 | Deliverability ops + analytics (auto-pause, health-worker, A/B stats) | ✅ done |
+| 6 | Backlog (enrichment, CRM webhook sync, team roles) | post-launch |
 
-## Getting started
+All product code (Phases 0–5) is built and reviewed. What remains is infra you
+provision: Supabase project, domains + DNS, the Google OAuth app, and env/cron.
 
-1. **Supabase**: create a project, then apply
-   [`supabase/migrations/20260713000001_phase0_foundations.sql`](./supabase/migrations/20260713000001_phase0_foundations.sql)
-   (CLI: `supabase link && supabase db push`, or paste into the SQL editor).
-2. **Auth**: in Supabase Auth settings disable self-serve signup, then create
-   your user (Auth → Users → Add user, auto-confirm). This app intentionally
-   has no public signup.
-3. **Env**: `cp .env.example .env.local` and fill in the Supabase URL +
-   publishable key.
-4. **Run**: `npm install && npm run dev` → sign in → the onboarding screen
-   creates your first workspace (installs you as owner via the
-   `create_workspace` RPC).
-5. **Sending infra** (calendar-critical, do in parallel):
-   [`docs/PHASE-0-CHECKLIST.md`](./docs/PHASE-0-CHECKLIST.md) and
-   [`docs/DNS-SETUP.md`](./docs/DNS-SETUP.md).
+## Getting started → **[`docs/GO-LIVE.md`](./docs/GO-LIVE.md)**
+
+The full ordered runbook (Supabase → env → deploy → first login → sending infra →
+workers → imports) lives in [`docs/GO-LIVE.md`](./docs/GO-LIVE.md). The short
+version:
+
+1. **Supabase**: create a project; apply all migrations in `supabase/migrations/`
+   in order (`supabase db push`, or paste each into the SQL editor).
+2. **Env**: `cp .env.example .env.local`; fill in Supabase URL + keys, `APP_URL`,
+   `TOKEN_ENCRYPTION_KEY` (`openssl rand -base64 32`), `CRON_SECRET`
+   (`openssl rand -hex 32`).
+3. **Deploy** to Vercel (set the same env vars there).
+4. **Create your login** (no self-serve signup):
+   `npm run create-user -- you@yourdomain.com` → sign in at `/login` → create a
+   workspace on `/onboarding`.
+5. **Sending infra**: Google OAuth app + domains/DNS + schedule the workers —
+   [`docs/GO-LIVE.md`](./docs/GO-LIVE.md) §§ 5–8. Cold-send volume is gated by
+   domain **warmup** (~2–4 weeks), not by remaining code.
 
 ## Layout
 

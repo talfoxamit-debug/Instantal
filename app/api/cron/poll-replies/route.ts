@@ -7,8 +7,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-// pg_cron hits this every 5 minutes (Section 5.4). Protected by CRON_SECRET.
-export async function POST(request: NextRequest) {
+// Reply/bounce poll (Section 5.4). Every 5 min via pg_cron (POST) or Vercel Cron
+// (GET). Both gated by CRON_SECRET.
+async function handle(request: NextRequest) {
   if (!isAuthorizedCron(request)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
@@ -22,3 +23,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = handle;
+export const GET = handle;

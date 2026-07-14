@@ -7,8 +7,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-// pg_cron hits this once a day (Section 5.5). Protected by CRON_SECRET.
-export async function POST(request: NextRequest) {
+// Daily deliverability health check (Section 5.5). Via pg_cron (POST) or Vercel
+// Cron (GET). Both gated by CRON_SECRET.
+async function handle(request: NextRequest) {
   if (!isAuthorizedCron(request)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
@@ -22,3 +23,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = handle;
+export const GET = handle;

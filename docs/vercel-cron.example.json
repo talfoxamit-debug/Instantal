@@ -1,0 +1,8 @@
+{
+  "$comment": "OPTIONAL. Copy to ./vercel.json to drive the workers with Vercel Cron instead of Supabase pg_cron. The minute/5-minute schedules REQUIRE a Vercel Pro plan (Hobby allows only daily crons, max 2, and would fail the deploy). Vercel automatically sends `Authorization: Bearer $CRON_SECRET` when a CRON_SECRET env var is set on the project, which the routes verify. If you use pg_cron (docs/SENDING-SETUP.md) instead, do NOT add this file.",
+  "crons": [
+    { "path": "/api/cron/send-worker", "schedule": "* * * * *" },
+    { "path": "/api/cron/poll-replies", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/health-worker", "schedule": "17 8 * * *" }
+  ]
+}
