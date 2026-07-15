@@ -1,6 +1,6 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
-import { supabaseUrl } from "@/lib/supabase/config";
+import { getSupabaseUrl } from "@/lib/supabase/config";
 
 // Service-role client for server-only workers (send-worker, reply-worker) and
 // public endpoints that must act without a user session (unsubscribe,
@@ -11,7 +11,7 @@ export function createAdminClient() {
   if (!secret) {
     throw new Error("SUPABASE_SECRET_KEY is not set (service-role key).");
   }
-  return createSupabaseClient(supabaseUrl, secret, {
+  return createSupabaseClient(getSupabaseUrl(), secret, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
