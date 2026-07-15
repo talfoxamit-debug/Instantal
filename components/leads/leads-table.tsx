@@ -35,6 +35,7 @@ import {
 import {
   addLeadsToList,
   deleteLeads,
+  enrichLeads,
   tagLeads,
 } from "@/lib/leads/actions";
 import type { Lead, LeadList } from "@/lib/types";
@@ -80,6 +81,22 @@ export function LeadsTable({
     });
   };
 
+  // Enrichment returns a summary, so it reports how many leads gained fields.
+  const enrich = () => {
+    startTransition(async () => {
+      try {
+        const { processed, enriched } = await enrichLeads(selectedIds);
+        setSelected(new Set());
+        toast.success(
+          `Enriched ${enriched} of ${processed} lead(s) with new fields.`,
+        );
+        router.refresh();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Enrichment failed");
+      }
+    });
+  };
+
   if (leads.length === 0) {
     return (
       <div className="rounded-lg border border-dashed p-12 text-center text-sm text-muted-foreground">
@@ -108,6 +125,7 @@ export function LeadsTable({
             )
           }
           onTag={(tag) => run(() => tagLeads(selectedIds, tag), `Tagged`)}
+          onEnrich={enrich}
         />
       ) : null}
 
@@ -175,6 +193,7 @@ function BulkToolbar({
   onDelete,
   onAddToList,
   onTag,
+  onEnrich,
 }: {
   count: number;
   lists: LeadList[];
@@ -182,6 +201,7 @@ function BulkToolbar({
   onDelete: () => void;
   onAddToList: (listId: string) => void;
   onTag: (tag: string) => void;
+  onEnrich: () => void;
 }) {
   const [tag, setTag] = useState("");
 
@@ -233,6 +253,10 @@ function BulkToolbar({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Button variant="outline" size="sm" disabled={disabled} onClick={onEnrich}>
+        Enrich
+      </Button>
 
       <Button
         variant="destructive"
