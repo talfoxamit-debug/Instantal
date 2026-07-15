@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TIMEZONES, VENTURES } from "@/lib/types";
+import { TIMEZONES } from "@/lib/types";
 
 // Shared by /onboarding (first workspace) and /workspaces/new (the rest).
 // originPath tells the server action where to send validation errors.
@@ -35,18 +35,16 @@ export function WorkspaceForm({
       </div>
       <div className="grid gap-2">
         <Label htmlFor="venture">Venture</Label>
-        <Select name="venture" defaultValue={VENTURES[0]} required>
-          <SelectTrigger id="venture" className="w-full">
-            <SelectValue placeholder="Select a venture" />
-          </SelectTrigger>
-          <SelectContent>
-            {VENTURES.map((venture) => (
-              <SelectItem key={venture} value={venture}>
-                {venture}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Input
+          id="venture"
+          name="venture"
+          placeholder="Stackwrk"
+          maxLength={60}
+          required
+        />
+        <p className="text-xs text-muted-foreground">
+          A short label for this venture. You can change it later in Settings.
+        </p>
       </div>
       <div className="grid gap-2">
         <Label htmlFor="physical_address">

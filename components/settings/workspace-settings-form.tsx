@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { updateWorkspaceSettings } from "@/lib/workspaces/actions";
-import { TIMEZONES, VENTURES } from "@/lib/types";
+import { TIMEZONES } from "@/lib/types";
 import type { Workspace } from "@/lib/types";
 
 export function WorkspaceSettingsForm({
@@ -52,23 +52,15 @@ export function WorkspaceSettingsForm({
 
       <div className="grid gap-2">
         <Label htmlFor="venture">Venture</Label>
-        <Select
+        <Input
+          id="venture"
           name="venture"
           defaultValue={workspace.venture}
+          placeholder="Stackwrk"
+          maxLength={60}
           required
           disabled={!canEdit}
-        >
-          <SelectTrigger id="venture" className="w-full">
-            <SelectValue placeholder="Select a venture" />
-          </SelectTrigger>
-          <SelectContent>
-            {VENTURES.map((venture) => (
-              <SelectItem key={venture} value={venture}>
-                {venture}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        />
       </div>
 
       <div className="grid gap-2">
