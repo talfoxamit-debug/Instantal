@@ -9,6 +9,8 @@ import {
   Users,
 } from "lucide-react";
 
+import { Logo } from "@/components/logo";
+
 // Placeholder items unlock as their build phase ships
 // (OUTREACH-BUILD-PLAN.md Section 7).
 const NAV_ITEMS = [
@@ -25,8 +27,8 @@ export function AppSidebar() {
   return (
     <aside className="hidden w-56 shrink-0 border-r bg-sidebar md:flex md:flex-col">
       <div className="flex h-14 items-center border-b px-4">
-        <Link href="/dashboard" className="font-semibold tracking-tight">
-          Instantal
+        <Link href="/dashboard">
+          <Logo />
         </Link>
       </div>
       <nav className="flex flex-1 flex-col gap-1 p-2">

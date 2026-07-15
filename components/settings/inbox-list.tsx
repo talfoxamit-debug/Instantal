@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { RampScheduleDialog } from "@/components/settings/ramp-schedule-dialog";
 import {
   activateInbox,
   pauseInbox,
@@ -104,7 +105,13 @@ export function InboxList({ inboxes }: { inboxes: InboxView[] }) {
                   </TableCell>
                   <TableCell>{inbox.sent_today}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <RampScheduleDialog
+                        inboxId={inbox.id}
+                        email={inbox.email}
+                        dailyCap={inbox.daily_cap}
+                        config={inbox.ramp_config}
+                      />
                       {inbox.status !== "active" ? (
                         inbox.connected ? (
                           <Button

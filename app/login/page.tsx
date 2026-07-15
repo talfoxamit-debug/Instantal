@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Logo } from "@/components/logo";
 
 export const metadata: Metadata = {
   title: "Sign in",
@@ -28,7 +29,9 @@ export default async function LoginPage({
     <main className="flex flex-1 items-center justify-center p-6">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-xl">Instantal</CardTitle>
+          <CardTitle className="text-xl">
+            <Logo iconClassName="size-6" />
+          </CardTitle>
           <CardDescription>
             Sign in to your outreach workspace. Accounts are created by an
             admin — there is no self-serve signup.

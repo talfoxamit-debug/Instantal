@@ -10,7 +10,13 @@ import {
   renderTemplate,
   seededPicker,
 } from "@/lib/sending/render";
-import { gapSatisfied, rampCap, randomGapMs } from "@/lib/sending/ramp";
+import {
+  gapSatisfied,
+  rampCap,
+  randomGapMs,
+  rampConfigToSchedule,
+  type RampConfig,
+} from "@/lib/sending/ramp";
 import {
   isWithinWindow,
   nextWindowOpen,
@@ -130,6 +136,9 @@ export async function runSendWorker(now: Date = new Date()): Promise<WorkerResul
         inbox.warmup_started_at ? new Date(inbox.warmup_started_at) : null,
         inbox.daily_cap,
         now,
+        inbox.ramp_schedule
+          ? rampConfigToSchedule(inbox.ramp_schedule)
+          : undefined,
       );
       const sentToday = await countSentToday(admin, inboxId, now);
       const gapMs = randomGapMs();
@@ -194,13 +203,14 @@ interface InboxRow {
   warmup_started_at: string | null;
   last_send_at: string | null;
   status: string;
+  ramp_schedule: RampConfig | null;
 }
 
 async function loadInbox(admin: Admin, id: string): Promise<InboxRow | null> {
   const { data } = await admin
     .from("inboxes")
     .select(
-      "id, workspace_id, email, display_name, oauth_refresh_token_enc, daily_cap, warmup_started_at, last_send_at, status",
+      "id, workspace_id, email, display_name, oauth_refresh_token_enc, daily_cap, warmup_started_at, last_send_at, status, ramp_schedule",
     )
     .eq("id", id)
     .maybeSingle();

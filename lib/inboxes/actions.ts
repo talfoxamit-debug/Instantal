@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { validateRampConfig, type RampConfig } from "@/lib/sending/ramp";
 import { requireActiveWorkspaceId } from "@/lib/workspaces/data";
 
 // Activate an inbox for sending. Refuses if it isn't connected (no OAuth
@@ -71,6 +72,39 @@ export async function setInboxDailyCap(
   const { error } = await supabase
     .from("inboxes")
     .update({ daily_cap: Math.floor(dailyCap) })
+    .eq("workspace_id", workspaceId)
+    .eq("id", inboxId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/settings/inboxes");
+}
+
+// Override the ramp day-thresholds/caps for one inbox. Validated with the
+// same pure rule the worker relies on for correctness (validateRampConfig),
+// so a malformed config can never reach the send-worker.
+export async function updateRampConfig(
+  inboxId: string,
+  config: RampConfig,
+): Promise<void> {
+  const workspaceId = await requireActiveWorkspaceId();
+  const error = validateRampConfig(config);
+  if (error) throw new Error(error);
+  const supabase = await createClient();
+  const { error: dbError } = await supabase
+    .from("inboxes")
+    .update({ ramp_schedule: config })
+    .eq("workspace_id", workspaceId)
+    .eq("id", inboxId);
+  if (dbError) throw new Error(dbError.message);
+  revalidatePath("/settings/inboxes");
+}
+
+// Revert an inbox to the platform default ramp schedule.
+export async function resetRampConfig(inboxId: string): Promise<void> {
+  const workspaceId = await requireActiveWorkspaceId();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("inboxes")
+    .update({ ramp_schedule: null })
     .eq("workspace_id", workspaceId)
     .eq("id", inboxId);
   if (error) throw new Error(error.message);

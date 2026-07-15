@@ -1,4 +1,4 @@
-import { rampCap } from "@/lib/sending/ramp";
+import { rampCap, rampConfigToSchedule, type RampConfig } from "@/lib/sending/ramp";
 import { createClient } from "@/lib/supabase/server";
 import { requireActiveWorkspaceId } from "@/lib/workspaces/data";
 
@@ -16,6 +16,7 @@ export interface InboxView {
   domain: string | null;
   connected: boolean; // has an OAuth refresh token stored
   ramp_cap: number; // today's allowed volume under the ramp schedule
+  ramp_config: RampConfig | null; // null = using the platform default schedule
   sent_today: number;
 }
 
@@ -44,7 +45,7 @@ export async function getInboxes(): Promise<InboxView[]> {
   const { data, error } = await supabase
     .from("inboxes")
     .select(
-      "id, email, display_name, provider, status, daily_cap, warmup_status, warmup_started_at, last_send_at, health_score, oauth_refresh_token_enc, sending_domains(domain)",
+      "id, email, display_name, provider, status, daily_cap, warmup_status, warmup_started_at, last_send_at, health_score, oauth_refresh_token_enc, ramp_schedule, sending_domains(domain)",
     )
     .eq("workspace_id", workspaceId)
     .order("email");
@@ -60,6 +61,7 @@ export async function getInboxes(): Promise<InboxView[]> {
       .gte("sent_at", startOfDay);
     const domain =
       (r.sending_domains as unknown as { domain: string } | null)?.domain ?? null;
+    const rampConfig = (r.ramp_schedule as RampConfig | null) ?? null;
     views.push({
       id: r.id as string,
       email: r.email as string,
@@ -77,7 +79,9 @@ export async function getInboxes(): Promise<InboxView[]> {
         r.warmup_started_at ? new Date(r.warmup_started_at as string) : null,
         r.daily_cap as number,
         now,
+        rampConfig ? rampConfigToSchedule(rampConfig) : undefined,
       ),
+      ramp_config: rampConfig,
       sent_today: count ?? 0,
     });
   }
