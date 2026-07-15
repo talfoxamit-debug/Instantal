@@ -128,6 +128,26 @@ export async function listRecentMessageIds(
   return ids;
 }
 
+// Search a mailbox by Gmail query (e.g. `subject:"tok-abc"`). Includes spam +
+// trash — essential for placement testing, where the whole point is to detect
+// a message that landed in the spam folder (which messages.list hides by
+// default). Returns matching message ids (bounded).
+export async function searchMessageIds(
+  accessToken: string,
+  query: string,
+  maxResults = 10,
+): Promise<string[]> {
+  const params = new URLSearchParams({
+    q: query,
+    includeSpamTrash: "true",
+    maxResults: String(maxResults),
+  });
+  const res = await authedGet(accessToken, `/messages?${params.toString()}`);
+  if (!res.ok) throw new Error(`Gmail search failed (${res.status}).`);
+  const json = (await res.json()) as { messages?: { id?: string }[] };
+  return (json.messages ?? []).map((m) => m.id).filter((id): id is string => !!id);
+}
+
 function headerValue(headers: GmailHeader[], name: string): string {
   const h = headers.find((x) => x.name.toLowerCase() === name.toLowerCase());
   return h?.value ?? "";

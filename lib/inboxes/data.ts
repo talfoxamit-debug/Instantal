@@ -48,6 +48,9 @@ export async function getInboxes(): Promise<InboxView[]> {
       "id, email, display_name, provider, status, daily_cap, warmup_status, warmup_started_at, last_send_at, health_score, oauth_refresh_token_enc, ramp_schedule, sending_domains(domain)",
     )
     .eq("workspace_id", workspaceId)
+    // Seeds only receive placement-test mail; they are managed on the
+    // Deliverability test page and must not appear as sendable inboxes.
+    .eq("is_seed", false)
     .order("email");
   if (error) throw new Error(`Failed to load inboxes: ${error.message}`);
 
