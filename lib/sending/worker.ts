@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { enqueueNextStepRow } from "@/lib/campaigns/advance";
 import { decryptToken } from "@/lib/crypto/tokens";
 import { refreshAccessToken } from "@/lib/gmail/oauth";
 import { GmailSendError, sendGmailMessage } from "@/lib/gmail/send";
@@ -276,10 +277,24 @@ async function processOne(
 
   const { data: lead } = await admin
     .from("leads")
-    .select("id, email, first_name, last_name, company, title, custom, status")
+    .select("id, email, first_name, last_name, company, title, custom, status, verify_status")
     .eq("id", row.lead_id)
     .maybeSingle();
   if (!lead) return finalizeFail(admin, row, "lead_missing", now);
+
+  // Never email an unverified address (Section 5.1). The email-first enqueue path
+  // already filters to verify_status='valid', but a LinkedIn-first mixed sequence
+  // enrolls leads by linkedin_url and can advance an unverified lead onto an email
+  // step — this is the hard backstop that keeps the invariant regardless of how
+  // the row was queued. The lead still gets its LinkedIn touches; only the email
+  // is withheld until verification.
+  if (lead.verify_status !== "valid") {
+    await admin
+      .from("send_queue")
+      .update({ status: "cancelled", error: "unverified_lead", updated_at: now.toISOString() })
+      .eq("id", row.id);
+    return "skipped";
+  }
 
   // Defensive suppression re-check: the suppression trigger should already have
   // cancelled this row, but never send to a suppressed address.
@@ -523,7 +538,10 @@ async function processOne(
   return "sent";
 }
 
-// Schedule the lead's next step (if any), or mark the sequence finished.
+// Schedule the lead's next step (if any), or mark the sequence finished. The
+// next step may be a LinkedIn step, so enqueuing the right channel row is
+// delegated to the shared advancer; this keeps only the email-specific
+// campaign_leads bookkeeping (thread_id for follow-up threading).
 async function advanceSequence(
   admin: Admin,
   row: QueueRow,
@@ -532,14 +550,14 @@ async function advanceSequence(
   sent: { threadId: string; rfcMessageId?: string },
   now: Date,
 ): Promise<void> {
-  const { data: nextStep } = await admin
-    .from("campaign_steps")
-    .select("id, step_no, delay_days")
-    .eq("campaign_id", row.campaign_id)
-    .gt("step_no", currentStepNo)
-    .order("step_no", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+  const result = await enqueueNextStepRow(admin, {
+    workspaceId: row.workspace_id,
+    campaignId: row.campaign_id,
+    leadId: row.lead_id,
+    currentStepNo,
+    now,
+    currentInboxId: inboxId,
+  });
 
   const clBase = {
     workspace_id: row.workspace_id,
@@ -551,36 +569,12 @@ async function advanceSequence(
     updated_at: now.toISOString(),
   };
 
-  if (!nextStep) {
-    await admin
-      .from("campaign_leads")
-      .upsert(
-        { ...clBase, status: "finished", next_send_at: null },
-        { onConflict: "campaign_id,lead_id" },
-      );
-    return;
-  }
-
-  const nextSendAt = new Date(
-    now.getTime() + (nextStep.delay_days as number) * 86_400_000,
-  ).toISOString();
-
-  await admin
-    .from("campaign_leads")
-    .upsert(
-      { ...clBase, status: "active", next_send_at: nextSendAt },
-      { onConflict: "campaign_id,lead_id" },
-    );
-
-  await admin.from("send_queue").insert({
-    workspace_id: row.workspace_id,
-    campaign_id: row.campaign_id,
-    lead_id: row.lead_id,
-    step_id: nextStep.id,
-    inbox_id: inboxId,
-    scheduled_at: nextSendAt,
-    status: "pending",
-  });
+  await admin.from("campaign_leads").upsert(
+    result.finished
+      ? { ...clBase, status: "finished", next_send_at: null }
+      : { ...clBase, status: "active", next_send_at: result.nextSendAt },
+    { onConflict: "campaign_id,lead_id" },
+  );
 }
 
 async function finalizeFail(

@@ -27,6 +27,8 @@ export interface CampaignStep {
   body_text: string | null;
   body_html: string | null;
   variant_group: string;
+  channel: "email" | "linkedin";
+  linkedin_action: "connect" | "message" | "inmail" | null;
 }
 
 export interface CampaignDetail extends CampaignSummary {
@@ -38,6 +40,7 @@ export interface CampaignDetail extends CampaignSummary {
   track_opens: boolean;
   track_clicks: boolean;
   daily_limit: number | null;
+  linkedin_account_ids: string[];
   steps: CampaignStep[];
 }
 
@@ -130,21 +133,35 @@ export async function getLaunchChecklist(
     .eq("id", workspaceId)
     .maybeSingle();
 
-  // Step completeness: the lowest step_no must have subject + a body.
+  // Channel mix. The first step's channel decides who is enrolled at launch and
+  // which infrastructure the gate requires (email vs LinkedIn).
   const stepNos = campaign.steps.map((s) => s.step_no);
   const firstNo = stepNos.length ? Math.min(...stepNos) : null;
-  const firstStepComplete =
-    firstNo != null &&
-    campaign.steps.some(
-      (s) =>
-        s.step_no === firstNo &&
-        !!s.subject?.trim() &&
-        (!!s.body_text?.trim() || !!s.body_html?.trim()),
+  const firstStepGroup =
+    firstNo != null ? campaign.steps.filter((s) => s.step_no === firstNo) : [];
+  const firstStepChannel: "email" | "linkedin" =
+    firstStepGroup[0]?.channel === "linkedin" ? "linkedin" : "email";
+  const hasEmailStep = campaign.steps.some((s) => s.channel !== "linkedin");
+  const hasLinkedinStep = campaign.steps.some((s) => s.channel === "linkedin");
+
+  // Step completeness of the first step group: an email step needs subject + a
+  // body; a LinkedIn connect needs only its action (the note is optional), a
+  // LinkedIn message needs body text.
+  const stepComplete = (s: CampaignStep): boolean => {
+    if (s.channel === "linkedin") {
+      if (!s.linkedin_action) return false;
+      return s.linkedin_action === "connect" ? true : !!s.body_text?.trim();
+    }
+    return (
+      !!s.subject?.trim() && (!!s.body_text?.trim() || !!s.body_html?.trim())
     );
+  };
+  const firstStepComplete = firstStepGroup.some(stepComplete);
 
   // Lead counts within the selected list.
   let verifiedLeadCount = 0;
   let unverifiedLeadCount = 0;
+  let linkedinLeadCount = 0;
   if (campaign.list_id) {
     const [{ count: verified }, { count: unverified }] = await Promise.all([
       supabase
@@ -169,6 +186,34 @@ export async function getLaunchChecklist(
     ]);
     verifiedLeadCount = verified ?? 0;
     unverifiedLeadCount = unverified ?? 0;
+
+    if (firstStepChannel === "linkedin") {
+      const { count: liCount } = await supabase
+        .from("list_members")
+        .select("lead_id, leads!inner(custom, status)", {
+          count: "exact",
+          head: true,
+        })
+        .eq("workspace_id", workspaceId)
+        .eq("list_id", campaign.list_id)
+        .eq("leads.status", "active")
+        .not("leads.custom->>linkedin_url", "is", null);
+      linkedinLeadCount = liCount ?? 0;
+    }
+  }
+
+  // LinkedIn accounts assigned to the campaign + how many are connected.
+  const linkedinAccountIds = campaign.linkedin_account_ids ?? [];
+  let connectedLinkedinAccountCount = 0;
+  if (linkedinAccountIds.length > 0) {
+    const { data: laccts } = await supabase
+      .from("linkedin_accounts")
+      .select("id, status")
+      .eq("workspace_id", workspaceId)
+      .in("id", linkedinAccountIds);
+    connectedLinkedinAccountCount = (laccts ?? []).filter(
+      (a) => a.status === "connected",
+    ).length;
   }
 
   // Selected inboxes + their domains.
@@ -241,11 +286,18 @@ export async function getLaunchChecklist(
     domainsDnsVerified,
     oldestDomainAgeDays,
     minDomainAgeDays: MIN_DOMAIN_AGE_DAYS,
+    hasEmailStep,
+    hasLinkedinStep,
+    firstStepChannel,
+    linkedinLeadCount,
+    linkedinAccountCount: linkedinAccountIds.length,
+    connectedLinkedinAccountCount,
   });
 
   return {
     items,
     passes: checklistPasses(items),
-    eligibleLeadCount: verifiedLeadCount,
+    eligibleLeadCount:
+      firstStepChannel === "linkedin" ? linkedinLeadCount : verifiedLeadCount,
   };
 }

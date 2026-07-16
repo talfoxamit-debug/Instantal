@@ -21,6 +21,7 @@ import {
   type CampaignSettingsInput,
 } from "@/lib/campaigns/actions";
 import type { InboxView } from "@/lib/inboxes/data";
+import type { LinkedinAccountView } from "@/lib/linkedin/data";
 import { TIMEZONES, type LeadList } from "@/lib/types";
 
 const DAYS_OF_WEEK = [
@@ -37,10 +38,12 @@ export function CampaignSettings({
   campaign,
   lists,
   inboxes,
+  linkedinAccounts,
 }: {
   campaign: CampaignDetail;
   lists: LeadList[];
   inboxes: InboxView[];
+  linkedinAccounts: LinkedinAccountView[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -48,6 +51,9 @@ export function CampaignSettings({
   const [name, setName] = useState(campaign.name);
   const [listId, setListId] = useState<string | null>(campaign.list_id ?? null);
   const [inboxIds, setInboxIds] = useState<string[]>(campaign.inbox_ids ?? []);
+  const [linkedinAccountIds, setLinkedinAccountIds] = useState<string[]>(
+    campaign.linkedin_account_ids ?? [],
+  );
   const [sendWindowStart, setSendWindowStart] = useState(
     campaign.send_window_start.slice(0, 5)
   );
@@ -82,6 +88,14 @@ export function CampaignSettings({
     );
   };
 
+  const toggleLinkedinAccount = (accountId: string) => {
+    setLinkedinAccountIds((prev) =>
+      prev.includes(accountId)
+        ? prev.filter((id) => id !== accountId)
+        : [...prev, accountId]
+    );
+  };
+
   const handleSubmit = () => {
     startTransition(async () => {
       try {
@@ -89,6 +103,7 @@ export function CampaignSettings({
           name: name.trim(),
           list_id: listId,
           inbox_ids: inboxIds,
+          linkedin_account_ids: linkedinAccountIds,
           send_window_start: sendWindowStart + ":00",
           send_window_end: sendWindowEnd + ":00",
           send_days: sendDays,
@@ -164,6 +179,40 @@ export function CampaignSettings({
             </div>
           ))}
         </div>
+      </div>
+
+      {/* LinkedIn accounts (only relevant when the sequence has a LinkedIn step) */}
+      <div className="grid gap-3">
+        <Label>LinkedIn accounts</Label>
+        {linkedinAccounts.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No LinkedIn accounts connected. Connect one under Settings › LinkedIn
+            to send LinkedIn steps.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {linkedinAccounts.map((account) => (
+              <div key={account.id} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`li-${account.id}`}
+                  checked={linkedinAccountIds.includes(account.id)}
+                  onCheckedChange={() => toggleLinkedinAccount(account.id)}
+                />
+                <Label
+                  htmlFor={`li-${account.id}`}
+                  className="text-sm font-normal cursor-pointer"
+                >
+                  {account.name ?? "Unnamed account"}
+                  {account.status !== "connected" && (
+                    <span className="text-muted-foreground ml-2">
+                      ({account.status})
+                    </span>
+                  )}
+                </Label>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Send Window */}

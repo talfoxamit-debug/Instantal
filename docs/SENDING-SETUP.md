@@ -130,6 +130,54 @@ Set `SLACK_ALERT_WEBHOOK_URL` to receive auto-pause / DNS-regression / blacklist
 alerts in Slack; without it, alerts are logged to the worker output. Remove
 later with `select cron.unschedule('instantal-health-worker');`.
 
+### 3c. Schedule the LinkedIn worker (roadmap P2b — optional)
+
+Only needed if you use the LinkedIn channel (Unipile). It dispatches LinkedIn
+steps and ingests inbound LinkedIn messages into the same unified inbox. It runs
+on its own lease (id=3) and is heavily throttled per account, so a slower
+cadence than email is intentional — every 15 minutes is plenty.
+
+```sql
+select cron.schedule(
+  'instantal-linkedin-worker',
+  '*/15 * * * *',                    -- every 15 minutes
+  $$
+  select net.http_post(
+    url     := 'https://APP_URL/api/cron/linkedin-worker',  -- <-- your APP_URL
+    headers := jsonb_build_object(
+      'Authorization', 'Bearer YOUR_CRON_SECRET',            -- <-- your CRON_SECRET
+      'Content-Type',  'application/json'
+    ),
+    body    := '{}'::jsonb
+  );
+  $$
+);
+```
+
+Requires `UNIPILE_DSN` + `UNIPILE_API_KEY` (from your Unipile account). Connect
+a LinkedIn account under **Settings → LinkedIn**, then assign it to a campaign
+and add a LinkedIn step to the sequence. Per-account safe caps
+(invites/day, messages/day) are editable there and default to 20 / 40. The
+worker sends at most one action per account per tick with a randomized 6–16 min
+gap, and never auto-retries a dispatched action (at-most-once). Remove later
+with `select cron.unschedule('instantal-linkedin-worker');`.
+
+### 3d. Lead enrichment + net-new contact search (roadmap P2a — optional)
+
+These add data providers; no cron is needed (they run on demand from the UI).
+
+- **Enrichment** (find/verify emails, fill firmographics): set
+  `ENRICHMENT_API_KEY` and optionally `ENRICHMENT_PROVIDER` (comma-separated
+  waterfall; default `prospeo`, also supports `leadmagic`). Drives the **Enrich**
+  action on leads. Unset ⇒ the action reports no provider and changes nothing.
+  Enrichment never invents an address — it only stores a provider-returned email,
+  and the new/updated lead stays **unverified** until it passes verification.
+- **Contact search** (net-new leads): set `CONTACT_SEARCH_API_KEY` and optionally
+  `CONTACT_SEARCH_PROVIDER` (default `pdl`, People Data Labs). Powers
+  **Leads → Find leads**. Found contacts are inserted as unverified leads
+  (deduped on email), so the launch gate still requires verification before any
+  email goes out.
+
 ## 4. Bring an inbox online
 
 Per inbox, in **Settings → Inboxes**:

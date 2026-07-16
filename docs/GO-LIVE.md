@@ -60,6 +60,13 @@ Needed **before sending / replies** (can add later): `GOOGLE_OAUTH_CLIENT_ID`,
 `OAUTH_STATE_SECRET` (falls back to `CRON_SECRET`), `ANTHROPIC_CLASSIFY_MODEL`,
 `OOO_RESUME_DELAY_DAYS`, `SLACK_ALERT_WEBHOOK_URL`.
 
+Optional **roadmap P2** data/channel providers (see
+`docs/SENDING-SETUP.md` § 3c–3d): `ENRICHMENT_API_KEY` (+ `ENRICHMENT_PROVIDER`)
+for email enrichment, `CONTACT_SEARCH_API_KEY` (+ `CONTACT_SEARCH_PROVIDER`) for
+net-new lead search, and `UNIPILE_DSN` + `UNIPILE_API_KEY` for the LinkedIn
+channel. All are unset by default and the related features simply report
+they're not configured until you add them.
+
 Set the same vars in Vercel (*Project → Settings → Environment Variables*).
 
 ---

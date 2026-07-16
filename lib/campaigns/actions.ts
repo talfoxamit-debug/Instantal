@@ -26,6 +26,7 @@ export interface CampaignSettingsInput {
   name?: string;
   list_id?: string | null;
   inbox_ids?: string[];
+  linkedin_account_ids?: string[];
   send_window_start?: string;
   send_window_end?: string;
   send_days?: number[];
@@ -49,6 +50,7 @@ export async function updateCampaignSettings(
     "name",
     "list_id",
     "inbox_ids",
+    "linkedin_account_ids",
     "send_window_start",
     "send_window_end",
     "send_days",
@@ -78,6 +80,8 @@ export interface StepInput {
   body_text: string;
   body_html?: string | null;
   variant_group?: string;
+  channel?: "email" | "linkedin";
+  linkedin_action?: "connect" | "message" | "inmail" | null;
 }
 
 export async function saveStep(
@@ -86,15 +90,20 @@ export async function saveStep(
 ): Promise<void> {
   const workspaceId = await requireActiveWorkspaceId();
   const supabase = await createClient();
+  const channel = step.channel === "linkedin" ? "linkedin" : "email";
+  // Email steps carry no LinkedIn action; LinkedIn steps carry no subject.
   const row = {
     workspace_id: workspaceId,
     campaign_id: campaignId,
     step_no: step.step_no,
     delay_days: step.delay_days,
-    subject: step.subject,
+    subject: channel === "linkedin" ? null : step.subject,
     body_text: step.body_text,
-    body_html: step.body_html ?? null,
+    body_html: channel === "linkedin" ? null : (step.body_html ?? null),
     variant_group: step.variant_group ?? "A",
+    channel,
+    linkedin_action:
+      channel === "linkedin" ? (step.linkedin_action ?? "message") : null,
   };
   if (step.id) {
     const { error } = await supabase
@@ -144,6 +153,21 @@ export async function launchCampaign(campaignId: string): Promise<void> {
   }
 
   const supabase = await createClient();
+
+  // Resume: revive the in-flight queue rows that pausing cancelled. Pausing sets
+  // every pending row to status='cancelled', error='campaign_paused'; because the
+  // sequence is enqueued one step at a time, a mid-sequence lead's ONLY row is
+  // that cancelled follow-up, and re-enqueue (below) only ever creates first-step
+  // rows for not-yet-enrolled leads. Without this, every already-enrolled lead
+  // would silently stop after a pause→resume. Reviving to 'pending' lets the
+  // worker pick them up again (it re-checks the send window before dispatch).
+  await supabase
+    .from("send_queue")
+    .update({ status: "pending", error: null })
+    .eq("workspace_id", workspaceId)
+    .eq("campaign_id", campaignId)
+    .eq("status", "cancelled")
+    .eq("error", "campaign_paused");
 
   // Serialize launches with a status compare-and-set: only the launch that
   // flips the campaign to 'active' proceeds to enqueue. A concurrent second
@@ -216,6 +240,7 @@ export async function duplicateCampaign(campaignId: string): Promise<void> {
       status: "draft",
       list_id: src.list_id,
       inbox_ids: src.inbox_ids,
+      linkedin_account_ids: src.linkedin_account_ids,
       send_window_start: src.send_window_start,
       send_window_end: src.send_window_end,
       send_days: src.send_days,
@@ -241,6 +266,8 @@ export async function duplicateCampaign(campaignId: string): Promise<void> {
       body_text: s.body_text,
       body_html: s.body_html,
       variant_group: s.variant_group,
+      channel: s.channel ?? "email",
+      linkedin_action: s.linkedin_action ?? null,
     }));
     await supabase.from("campaign_steps").insert(rows);
   }

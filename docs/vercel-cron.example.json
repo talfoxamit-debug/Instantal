@@ -3,6 +3,7 @@
   "crons": [
     { "path": "/api/cron/send-worker", "schedule": "* * * * *" },
     { "path": "/api/cron/poll-replies", "schedule": "*/5 * * * *" },
-    { "path": "/api/cron/health-worker", "schedule": "17 8 * * *" }
+    { "path": "/api/cron/health-worker", "schedule": "17 8 * * *" },
+    { "$comment": "OPTIONAL — only if you use the LinkedIn channel (Unipile).", "path": "/api/cron/linkedin-worker", "schedule": "*/15 * * * *" }
   ]
 }

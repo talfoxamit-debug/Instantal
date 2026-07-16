@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 const TABS = [
   { label: "Inboxes", href: "/settings/inboxes" },
   { label: "Sending domains", href: "/settings/domains" },
+  { label: "LinkedIn", href: "/settings/linkedin" },
   { label: "Deliverability test", href: "/settings/placement" },
   { label: "Workspace", href: "/settings/workspace" },
   { label: "Members", href: "/settings/members" },

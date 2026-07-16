@@ -22,6 +22,7 @@ import {
 } from "@/lib/campaigns/data";
 import { getLeadLists } from "@/lib/leads/data";
 import { getInboxes } from "@/lib/inboxes/data";
+import { getLinkedinAccounts } from "@/lib/linkedin/data";
 
 export const metadata: Metadata = { title: "Campaign" };
 
@@ -34,12 +35,14 @@ export default async function CampaignPage({
   const campaign = await getCampaign(id);
   if (!campaign) notFound();
 
-  const [checklist, lists, inboxes, sampleLead] = await Promise.all([
-    getLaunchChecklist(id),
-    getLeadLists(),
-    getInboxes(),
-    getSampleLead(campaign.list_id),
-  ]);
+  const [checklist, lists, inboxes, linkedinAccounts, sampleLead] =
+    await Promise.all([
+      getLaunchChecklist(id),
+      getLeadLists(),
+      getInboxes(),
+      getLinkedinAccounts(),
+      getSampleLead(campaign.list_id),
+    ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -80,6 +83,7 @@ export default async function CampaignPage({
             campaign={campaign}
             lists={lists}
             inboxes={inboxes}
+            linkedinAccounts={linkedinAccounts}
           />
         </TabsContent>
 
