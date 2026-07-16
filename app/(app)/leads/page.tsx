@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Plus, Upload } from "lucide-react";
+import { Plus, Search, Upload } from "lucide-react";
 
 import { LeadsFilterBar } from "@/components/leads/leads-filter-bar";
 import { LeadsTable } from "@/components/leads/leads-table";
@@ -52,6 +52,12 @@ export default async function LeadsPage({
           {count.toLocaleString()} lead{count === 1 ? "" : "s"}
         </p>
         <div className="flex gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/leads/find">
+              <Search className="size-4" />
+              Find leads
+            </Link>
+          </Button>
           <Button asChild variant="outline" size="sm">
             <Link href="/leads/import">
               <Upload className="size-4" />
