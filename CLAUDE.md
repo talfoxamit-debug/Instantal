@@ -2,6 +2,7 @@
 
 # Project context
 
+- **docs/QUALITY_SYSTEM.md** — fix classes, not instances. Read before fixing or auditing anything.
 - Master spec: `OUTREACH-BUILD-PLAN.md` in the repo root. Follow its Section 4
   schema exactly; ask before deviating. Build one phase per session.
 - Every database table carries `workspace_id` + an RLS policy. Reuse the
